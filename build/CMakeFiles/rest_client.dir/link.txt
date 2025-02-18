@@ -1,0 +1,2 @@
+/usr/bin/ar qc librest_client.a CMakeFiles/rest_client.dir/libs/rest_api/rest_client.cpp.o
+/usr/bin/ranlib librest_client.a

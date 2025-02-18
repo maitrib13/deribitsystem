@@ -1,0 +1,2 @@
+/usr/bin/ar qc libenv_handler.a CMakeFiles/env_handler.dir/libs/env_handler/env_handler.cpp.o
+/usr/bin/ranlib libenv_handler.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libwebsocket_manager.a CMakeFiles/websocket_manager.dir/libs/websocket/websocket_manager.cpp.o
+/usr/bin/ranlib libwebsocket_manager.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc liborder_placement.a CMakeFiles/order_placement.dir/libs/order_placement/order_placement.cpp.o
+/usr/bin/ranlib liborder_placement.a

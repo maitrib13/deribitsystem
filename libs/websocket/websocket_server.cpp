@@ -100,21 +100,6 @@ void WebSocketServer::onError(std::function<void(const std::string&)> callback) 
     errorHandler = std::move(callback);
 }
 
-// WebSocketSession implementation
-// WebSocketSession::WebSocketSession(WebSocketServer& server, net::io_context& ioc)
-//     : server(server), ws_(ioc) {
-//     // Configure the websocket stream
-//     ws_.binary(true);  // Enable binary message support
-//     ws_.read_message_max(16 * 1024 * 1024);  // Set reasonable message size limit (16MB)
-    
-//     // Set suggested timeout settings for the websocket
-//     ws_.set_option(
-//         websocket::stream_base::timeout::suggested(
-//             beast::role_type::server));
-
-//     // Set permessage-deflate options
-//     ws_.set_option(websocket::permessage_deflate{});
-// }
 
 WebSocketSession::WebSocketSession(WebSocketServer& server, net::io_context& ioc) 
         : server(server), ws_(ioc) {
@@ -160,37 +145,6 @@ void WebSocketSession::start() {
             }));
 }
 
-// void WebSocketSession::doRead() {
-//     auto self = shared_from_this();
-    
-//     ws_.async_read(
-//         buffer,
-//         [self](beast::error_code ec, std::size_t bytes_transferred) {
-//             if (ec == websocket::error::closed) {
-//                 // Normal closure
-//                 return;
-//             }
-            
-//             if (ec) {
-//                 if (self->server.errorHandler) {
-//                     self->server.errorHandler("Read error: " + ec.message());
-//                 }
-//                 return;
-//             }
-            
-//             // Get message as string
-//             std::string message = beast::buffers_to_string(self->buffer.data());
-//             self->buffer.consume(self->buffer.size());
-            
-//             // Forward the message
-//             if (self->server.messageHandler) {
-//                 self->server.messageHandler(self, message);
-//             }
-            
-//             // Continue reading
-//             self->doRead();
-//         });
-// }
 
 void WebSocketSession::doRead() {
     // Create a fresh buffer for each read
@@ -262,11 +216,7 @@ void WebSocketSession::onRead(beast::error_code ec, std::size_t bytes_transferre
 }
 
 void WebSocketSession::send(const std::string& message) {
-    outgoing_message = message;
-    std::cout << "Sending message using " 
-              << (use_binary_ ? "binary" : "text") 
-              << " protocol" << std::endl;
-    
+    outgoing_message = message;    
     // Set the message type according to configuration
     ws_.text(!use_binary_);
     

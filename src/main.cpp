@@ -68,17 +68,15 @@ void printHelp()
               << "----------------------------------------\n"
               << "Instrument Commands:\n"
               << "  instrument <symbol>     - Get instrument details\n"
-              << "  instruments <currency> <kind> - List instruments (e.g., 'instruments BTC future')\n"
               << "\nTrading Commands:\n"
               << "  buy <instrument> <type> <amount> [price]  - Place buy order\n"
               << "  sell <instrument> <type> <amount> [price] - Place sell order\n"
               << "  cancel <order_id>       - Cancel specific order\n"
               << "  modify <order_id> <new_price> <new_amount> - Modify existing order\n"
               << "\nInformation Commands:\n"
-              << "  orders [instrument]     - Get active orders (optional: for specific instrument)\n"
+              << "  orders                  - Get active orders (optional: for specific instrument)\n"
               << "  orderbook <instrument>  - Get orderbook\n"
               << "  positions <currency>    - Get positions\n"
-              << "  orderstatus <order_id> - Get order status\n"
               << "\nOther Commands:\n"
               << "  help                    - Show this help\n"
               << "  quit                    - Exit program\n"
@@ -120,7 +118,7 @@ int main()
             {
                 printHelp();
             }
-            else if (input.substr(0, 10) == "instrument" || input.substr(0, 11) == "instruments")
+            else if (input.substr(0, 10) == "instrument")
             {
                 try
                 {
@@ -130,13 +128,14 @@ int main()
 
                     if (currency.empty() || kind.empty())
                     {
-                        std::cout << "Usage: instruments <currency> <kind>" << std::endl;
+                        std::cout << "Usage: instrument <currency> <kind>" << std::endl;
                         std::cout << "Example: instruments BTC_USDT future" << std::endl;
-                        std::cout << "Available kinds: future, option" << std::endl;
+                        std::cout << "Available kinds: future, option, spot" << std::endl;
+        
                         continue;
                     }
 
-                    std::cout << "Getting instruments for " << currency << " " << kind << "..." << std::endl;
+                    std::cout << "Getting instrument for " << currency << " " << kind << "..." << std::endl;
                     auto future = orderHandler.getInstruments(currency, kind);
                     std::future_status status = future.wait_for(std::chrono::seconds(30));
 

@@ -13,87 +13,85 @@
 using json = nlohmann::json;
 std::atomic<bool> running{true};
 std::atomic<bool> connected{false};
-std::shared_ptr<WebSocketServer> server;  // Global server pointer
+std::shared_ptr<WebSocketServer> server; // Global server pointer
 WebSocketClient client;
 
-
-void signalHandler(int signum) {
+/**
+ * @brief Signal handler for graceful shutdown
+ * 
+ * @param signum Signal number
+ */
+void signalHandler(int signum)
+{
     std::cout << "Interrupt signal (" << signum << ") received.\n";
     running = false;
 }
 
-// Function to get instrument details
-void getInstrumentDetails(const std::string& instrument_name) {
-    try {
-        RestClient restClient;
-        restClient.setHeader("Accept", "application/json");
-        restClient.setTimeout(30);
-        
-        std::string url = "https://test.deribit.com/api/v2/public/get_instrument?instrument_name=" + instrument_name;
-        std::string response = restClient.get(url);
-        
-        if (restClient.getLastResponseCode() == 200) {
-            json responseJson = json::parse(response);
-            std::cout << "\nInstrument Details:" << std::endl;
-            std::cout << "Status: " << responseJson["result"]["status"] << std::endl;
-            std::cout << "Settlement Period: " << responseJson["result"]["settlement_period"] << std::endl;
-            std::cout << "Quote Currency: " << responseJson["result"]["quote_currency"] << std::endl;
-            std::cout << "Min Trade Amount: " << responseJson["result"]["min_trade_amount"] << std::endl;
-            std::cout << "Kind: " << responseJson["result"]["kind"] << std::endl;
-            std::cout << "Is Active: " << (responseJson["result"]["is_active"] ? "Yes" : "No") << std::endl;
-            std::cout << "Creation Timestamp: " << responseJson["result"]["creation_timestamp"] << std::endl;
-            std::cout << "Base Currency: " << responseJson["result"]["base_currency"] << std::endl;
-        } else {
-            std::cout << "Error getting instrument details. Status code: " 
-                      << restClient.getLastResponseCode() << std::endl;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Error fetching instrument details: " << e.what() << std::endl;
-    }
-}
-
-void safeShutdown(WebSocketClient& client, std::atomic<bool>& connected) {
-    if (connected) {
-        try {
+// Function to safely shutdown the WebSocket client
+void safeShutdown(WebSocketClient &client, std::atomic<bool> &connected)
+{
+    if (connected)
+    {
+        try
+        {
             std::cout << "Initiating graceful shutdown..." << std::endl;
-            
+
             // First, stop the read loop
             client.stop();
-            
+
             // Wait a moment for the read loop to stop
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            
+
             // Send close frame if still connected
-            if (connected) {
+            if (connected)
+            {
                 client.close();
             }
-            
+
             // Wait for close to complete
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            
+
             connected = false;
             running = false;
-            
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             std::cerr << "Shutdown warning: " << e.what() << std::endl;
         }
     }
 }
 
-void printHelp() {
-    std::cout << "\nAvailable Commands:" << std::endl;
-    std::cout << "1. instrument - Fetch instrument details" << std::endl;
-    std::cout << "2. buy - Place buy order (e.g., 'buy limit 0.1 220.0' , 'buy market 0.1')" << std::endl;
-    std::cout << "3. sell - Place sell order (e.g., 'sell market 0.1','sell limit 0.1 220.0')" << std::endl;
-    std::cout << "4. cancel <order_id> - Cancel specific order" << std::endl;
-    std::cout << "5. orders - View active orders" << std::endl;
-    std::cout << "6. help - Show this help message" << std::endl;
-    std::cout << "7. quit - Exit program" << std::endl;
+// Function to print available commands
+void printHelp()
+{
+    std::cout << "\nAvailable Commands:\n"
+              << "----------------------------------------\n"
+              << "Instrument Commands:\n"
+              << "  instrument <symbol>     - Get instrument details\n"
+              << "  instruments <currency> <kind> - List instruments (e.g., 'instruments BTC future')\n"
+              << "\nTrading Commands:\n"
+              << "  buy <instrument> <type> <amount> [price]  - Place buy order\n"
+              << "  sell <instrument> <type> <amount> [price] - Place sell order\n"
+              << "  cancel <order_id>       - Cancel specific order\n"
+              << "  modify <order_id> <new_price> <new_amount> - Modify existing order\n"
+              << "\nInformation Commands:\n"
+              << "  orders [instrument]     - Get active orders (optional: for specific instrument)\n"
+              << "  orderbook <instrument>  - Get orderbook\n"
+              << "  positions <currency>    - Get positions\n"
+              << "  orderstatus <order_id> - Get order status\n"
+              << "\nOther Commands:\n"
+              << "  help                    - Show this help\n"
+              << "  quit                    - Exit program\n"
+              << "----------------------------------------\n";
 }
 
-int main() {
-    try {
-        if (!EnvHandler::loadEnvFile()) {
+int main()
+{
+    try
+    {
+        // Load environment variables from .env file
+        if (!EnvHandler::loadEnvFile())
+        {
             std::cerr << "Failed to load .env file" << std::endl;
             return 1;
         }
@@ -105,70 +103,267 @@ int main() {
         WebSocketManager wsManager("0.0.0.0", 8000);
         wsManager.start();
 
-        std::cout << "Fetching BNB_USDC instrument details..." << std::endl;
-        getInstrumentDetails("BNB_USDC");
-
         std::cout << "\nConnecting to Deribit..." << std::endl;
-        wsManager.connectToDeribit("test.deribit.com", "443", "/ws/api/v2");
+        wsManager.connectToDeribit("www.deribit.com", "443", "/ws/api/v2");
 
+        // Print available commands
         printHelp();
 
         std::string input;
-        while (wsManager.isRunning() && std::getline(std::cin, input)) {
-            if (input == "quit") {
+        while (wsManager.isRunning() && std::getline(std::cin, input))
+        {
+            if (input == "quit")
+            {
                 break;
-            } else if (input == "help") {
+            }
+            else if (input == "help")
+            {
                 printHelp();
-            } else if (input == "instrument") {
-                getInstrumentDetails("BNB_USDC");
-            } else if (input == "orders") {
-                try {
-                    json response = orderHandler.getActiveOrders("BNB_USDC");
-                    std::cout << "Active orders: " << response.dump(2) << std::endl;
-                } catch (const std::exception& e) {
+            }
+            else if (input.substr(0, 10) == "instrument" || input.substr(0, 11) == "instruments")
+            {
+                try
+                {
+                    std::istringstream iss(input);
+                    std::string cmd, currency, kind;
+                    iss >> cmd >> currency >> kind;
+
+                    if (currency.empty() || kind.empty())
+                    {
+                        std::cout << "Usage: instruments <currency> <kind>" << std::endl;
+                        std::cout << "Example: instruments BTC_USDT future" << std::endl;
+                        std::cout << "Available kinds: future, option" << std::endl;
+                        continue;
+                    }
+
+                    std::cout << "Getting instruments for " << currency << " " << kind << "..." << std::endl;
+                    auto future = orderHandler.getInstruments(currency, kind);
+                    std::future_status status = future.wait_for(std::chrono::seconds(30));
+
+                    if (status == std::future_status::timeout)
+                    {
+                        throw std::runtime_error("Request timed out after 30 seconds");
+                    }
+                    json response = future.get();
+                    orderHandler.printResponse(response, ResponseType::INSTRUMENT);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cerr << "Error getting instruments: " << e.what() << std::endl;
+                }
+            }
+            else if (input.substr(0, 10) == "orderbook ")
+            {
+                try
+                {
+                    std::istringstream iss(input);
+                    std::string cmd, instrument;
+                    iss >> cmd >> instrument;
+
+                    if (instrument.empty())
+                    {
+                        std::cout << "Usage: orderbook <instrument>" << std::endl;
+                        continue;
+                    }
+
+                    auto future = orderHandler.getOrderbook(instrument);
+                    std::future_status status = future.wait_for(std::chrono::seconds(30));
+
+                    if (status == std::future_status::timeout)
+                    {
+                        throw std::runtime_error("Request timed out after 30 seconds");
+                    }
+                    json response = future.get();
+                    orderHandler.printResponse(response, ResponseType::ORDERBOOK);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cerr << "Error getting orderbook: " << e.what() << std::endl;
+                }
+            }
+            else if (input.substr(0, 10) == "positions ")
+            {
+                try
+                {
+                    std::istringstream iss(input);
+                    std::string cmd, currency;
+                    iss >> cmd >> currency;
+
+                    if (currency.empty())
+                    {
+                        std::cout << "Usage: positions <currency>" << std::endl;
+                        std::cout << "Example: positions BTC" << std::endl;
+                        continue;
+                    }
+
+                    std::cout << "Getting positions for " << currency << "..." << std::endl;
+                    auto future = orderHandler.getPositions(currency);
+                    std::future_status status = future.wait_for(std::chrono::seconds(30));
+
+                    if (status == std::future_status::timeout)
+                    {
+                        throw std::runtime_error("Request timed out after 30 seconds");
+                    }
+
+                    json response = future.get();
+                    orderHandler.printResponse(response, ResponseType::POSITION);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cerr << "Error getting positions: " << e.what() << std::endl;
+                }
+            }
+            else if (input.substr(0, 11) == "orderstatus ")
+            {
+                try
+                {
+                    std::istringstream iss(input);
+                    std::string cmd, orderId;
+                    iss >> cmd >> orderId;
+
+                    if (orderId.empty())
+                    {
+                        std::cout << "Usage: orderstatus <order_id>" << std::endl;
+                        continue;
+                    }
+
+                    auto future = orderHandler.getOrderState(orderId);
+                    std::future_status status = future.wait_for(std::chrono::seconds(30));
+
+                    if (status == std::future_status::timeout)
+                    {
+                        throw std::runtime_error("Request timed out after 30 seconds");
+                    }
+                    json response = future.get();
+                    orderHandler.printResponse(response, ResponseType::INSTRUMENT);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cerr << "Error getting order status: " << e.what() << std::endl;
+                }
+            }
+            else if (input.substr(0, 7) == "modify ")
+            {
+                try
+                {
+                    std::istringstream iss(input);
+                    std::string cmd, orderId, newPriceStr, newAmountStr;
+                    iss >> cmd >> orderId >> newPriceStr >> newAmountStr;
+
+                    if (orderId.empty() || newPriceStr.empty() || newAmountStr.empty())
+                    {
+                        std::cout << "Usage: modify <order_id> <new_price> <new_amount>" << std::endl;
+                        continue;
+                    }
+
+                    double newPrice = std::stod(newPriceStr);
+                    double newAmount = std::stod(newAmountStr);
+
+                    auto future = orderHandler.modifyOrder(orderId, newPrice, newAmount);
+                    std::future_status status = future.wait_for(std::chrono::seconds(30));
+
+                    if (status == std::future_status::timeout)
+                    {
+                        throw std::runtime_error("Request timed out after 30 seconds");
+                    }
+                    json response = future.get();
+                    orderHandler.printResponse(response, ResponseType::MODIFIED_ORDER);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cerr << "Error modifying order: " << e.what() << std::endl;
+                }
+            }
+            else if (input == "orders")
+            {
+                try
+                {
+                    std::cout << "Getting active orders"
+                              << "..." << std::endl;
+
+                    auto future = orderHandler.getActiveOrders();
+                    std::future_status status = future.wait_for(std::chrono::seconds(30));
+
+                    if (status == std::future_status::timeout)
+                    {
+                        throw std::runtime_error("Request timed out after 30 seconds");
+                    }
+
+                    json response = future.get();
+                    orderHandler.printResponse(response, ResponseType::ACTIVE_ORDERS);
+                }
+                catch (const std::exception &e)
+                {
                     std::cerr << "Error getting orders: " << e.what() << std::endl;
                 }
-            } else if (input.substr(0, 6) == "cancel" && input.length() > 7) {
-                try {
+            }
+            else if (input.substr(0, 6) == "cancel" && input.length() > 7)
+            {
+                try
+                {
                     std::string orderId = input.substr(7);
-                    json response = orderHandler.cancelOrder(orderId);
-                    std::cout << "Cancel response: " << response.dump(2) << std::endl;
-                } catch (const std::exception& e) {
+                    auto future = orderHandler.cancelOrder(orderId);
+                    std::future_status status = future.wait_for(std::chrono::seconds(30));
+
+                    if (status == std::future_status::timeout)
+                    {
+                        throw std::runtime_error("Request timed out after 30 seconds");
+                    }
+                    json response = future.get();
+                    orderHandler.printResponse(response, ResponseType::CANCELLED_ORDER);
+                }
+                catch (const std::exception &e)
+                {
                     std::cerr << "Error cancelling order: " << e.what() << std::endl;
                 }
-            } else if (input.substr(0, 3) == "buy" || input.substr(0, 4) == "sell") {
-                try {
+            }
+            else if (input.substr(0, 3) == "buy" || input.substr(0, 4) == "sell")
+            {
+                try
+                {
                     std::istringstream iss(input);
-                    std::string side, type, amountStr, priceStr;
-                    iss >> side >> type >> amountStr;
+                    std::string side, instrument, type, amountStr, priceStr;
+                    iss >> side >> instrument >> type >> amountStr;
                     double amount = std::stod(amountStr);
                     double price = 0.0;
-                    
-                    if (type == "limit") {
+
+                    if (type == "limit")
+                    {
                         iss >> priceStr;
                         price = std::stod(priceStr);
                     }
 
-                    json response = orderHandler.placeOrder(
-                        "BNB_USDC",
+                    auto future = orderHandler.placeOrder(
+                        instrument, // Use the provided instrument
                         side,
                         type,
                         amount,
-                        price
-                    );
-                    std::cout << "Order response: " << response.dump(2) << std::endl;
-                } catch (const std::exception& e) {
+                        price);
+                    std::future_status status = future.wait_for(std::chrono::seconds(30));
+
+                    if (status == std::future_status::timeout)
+                    {
+                        throw std::runtime_error("Request timed out after 30 seconds");
+                    }
+                    json response = future.get();
+                    orderHandler.printResponse(response, ResponseType::ORDER_RESPONSE);
+                }
+                catch (const std::exception &e)
+                {
                     std::cerr << "Error placing order: " << e.what() << std::endl;
                 }
-            } else if (!input.empty() && wsManager.isConnected()) {
+            }
+            else if (!input.empty() && wsManager.isConnected())
+            {
                 wsManager.sendToDeribit(input);
             }
         }
 
         // Cleanup
         wsManager.stop();
-
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception &e)
+    {
         std::cerr << "Main exception: " << e.what() << std::endl;
         return 1;
     }

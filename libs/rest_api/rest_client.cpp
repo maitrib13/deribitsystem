@@ -86,6 +86,8 @@ RestClient::~RestClient() = default;
 std::string RestClient::get(const std::string& url) {
     curl_easy_setopt(pimpl->curl, CURLOPT_HTTPGET, 1L);
     curl_easy_setopt(pimpl->curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(pimpl->curl, CURLOPT_CONNECTTIMEOUT, 10L);  
+    setTimeout(30);  // Default 30 seconds if not set
     pimpl->updateHeaders();
     return pimpl->performRequest();
 }
@@ -94,6 +96,8 @@ std::string RestClient::post(const std::string& url, const std::string& payload)
     curl_easy_setopt(pimpl->curl, CURLOPT_POST, 1L);
     curl_easy_setopt(pimpl->curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(pimpl->curl, CURLOPT_POSTFIELDS, payload.c_str());
+    curl_easy_setopt(pimpl->curl, CURLOPT_CONNECTTIMEOUT, 10L);  
+    setTimeout(30);  // Default 30 seconds if not set
     pimpl->updateHeaders();
     return pimpl->performRequest();
 }
@@ -102,6 +106,8 @@ std::string RestClient::put(const std::string& url, const std::string& payload) 
     curl_easy_setopt(pimpl->curl, CURLOPT_CUSTOMREQUEST, "PUT");
     curl_easy_setopt(pimpl->curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(pimpl->curl, CURLOPT_POSTFIELDS, payload.c_str());
+    curl_easy_setopt(pimpl->curl, CURLOPT_CONNECTTIMEOUT, 10L);  
+    setTimeout(30);  // Default 30 seconds if not set
     pimpl->updateHeaders();
     return pimpl->performRequest();
 }

@@ -57,7 +57,7 @@ void WebSocketClient::connect(const std::string& host, const std::string& port, 
         ws->handshake(host + ":" + std::to_string(ep.port()), path);
         
         isConnected = true;
-        std::cout << "Connected to: " << host << std::endl;
+        // std::cout << "Connected to: " << host << std::endl;
 
         // Start the read loop in a separate thread
         ioThread = std::make_unique<std::thread>(&WebSocketClient::readLoop, this);
